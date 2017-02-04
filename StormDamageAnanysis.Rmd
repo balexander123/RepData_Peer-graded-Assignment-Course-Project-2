@@ -1,0 +1,83 @@
+# Storm Damage Analysis X
+
+## Required Packages
+
+To download and read the data, we need the following packages:
+
+```{R results="hide", include=FALSE, cache=FALSE}
+install.packages("downloader", repos="http://cran.us.r-project.org")
+install.packages("R.utils", , repos="http://cran.us.r-project.org")
+
+library(downloader)  # download (hopefully platform independent)
+library(tools)  # md5sum
+library(R.utils)  # bunzip2d
+```
+
+## Source Data
+
+```{R}
+if(!file.exists("data")){dir.create("data")}
+
+fileUrl <- "https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2"
+
+if(!file.exists("data/repdata-data-StormData.csv")) {
+  download.file(fileUrl,destfile="./data/repdata-data-StormData.csv.bz2",method="curl")
+  bunzip2("data/repdata-data-StormData.csv.bz2")
+}
+stormDataRaw <- read.csv("data/repdata-data-StormData.csv")
+```
+
+## Data Exploration
+
+```{R}
+dim(stormDataRaw)
+str(stormDataRaw)
+```
+
+## Data Cleanse
+
+We will be using `dplyr` package for data manipulation.
+
+```{R results="hide", include=FALSE, cache=FALSE}
+# Use dplyr
+install.packages("dplyr", repos="http://cran.us.r-project.org")
+library(dplyr)
+```
+
+Subset data
+
+```{R}
+# First take a subset of relevant column variables
+stormData <- select(stormDataRaw, BGN_DATE, EVTYPE, FATALITIES, INJURIES, PROPDMG, PROPDMGEXP, CROPDMG, CROPDMGEXP)
+```
+
+Convert date
+
+```{R}
+# Convert date
+stormData$beginDate <- as.Date(strptime(stormData$BGN_DATE, format = "%m/%d/%Y %H:%M:%S"))
+```
+
+Standardize Events
+
+```{R}
+stormData$eventType <- as.character(stormData$EVTYPE)  
+stormData$eventType[grepl("tornad", stormData$eventType, ignore.case = TRUE)]          <- "TORNADO"  
+stormData$eventType[grepl("thun.*orm", stormData$eventType, ignore.case = TRUE)]       <- "THUNDERSTORM"  
+stormData$eventType[grepl("tstm", stormData$eventType, ignore.case = TRUE)]            <- "THUNDERSTORM"  
+stormData$eventType[grepl("snow", stormData$eventType, ignore.case = TRUE)]            <- "SNOW"  
+stormData$eventType[grepl("blizzard", stormData$eventType, ignore.case = TRUE)]        <- "BLIZZARD"  
+stormData$eventType[grepl("hail", stormData$eventType, ignore.case = TRUE)]            <- "HAIL"  
+stormData$eventType[grepl("rain", stormData$eventType, ignore.case = TRUE)]            <- "RAIN"  
+stormData$eventType[grepl("precip", stormData$eventType, ignore.case = TRUE)]          <- "RAIN"  
+stormData$eventType[grepl("hurricane", stormData$eventType, ignore.case = TRUE)]       <- "HURRICANE"  
+stormData$eventType[grepl("tropical.*storm", stormData$eventType, ignore.case = TRUE)] <- "TROPICALSTORM"  
+stormData$eventType[grepl("flood", stormData$eventType, ignore.case = TRUE)]           <- "FLOOD"  
+stormData$eventType[grepl("fire", stormData$eventType, ignore.case = TRUE)]            <- "FIRE"  
+stormData$eventType[grepl("lightn", stormData$eventType, ignore.case = TRUE)]          <- "LIGHTNING"  
+stormData$eventType[grepl("wind", stormData$eventType, ignore.case = TRUE)]            <- "WIND"  
+stormData$eventType[grepl("cold", stormData$eventType, ignore.case = TRUE)]            <- "COLD"  
+stormData$eventType[grepl("heat", stormData$eventType, ignore.case = TRUE)]            <- "HEAT"  
+stormData$eventType[grepl("storm surge", stormData$eventType, ignore.case = TRUE)]     <- "STORM SURGE"  
+stormData$eventType <- as.factor(stormData$eventType)
+```
