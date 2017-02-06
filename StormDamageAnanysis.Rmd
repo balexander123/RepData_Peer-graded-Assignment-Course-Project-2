@@ -44,11 +44,11 @@ install.packages("dplyr", repos="http://cran.us.r-project.org")
 library(dplyr)
 ```
 
-Subset data
+Mutate data
 
 ```{R}
 # First take a subset of relevant column variables
-stormData <- select(stormDataRaw, BGN_DATE, EVTYPE, FATALITIES, INJURIES, PROPDMG, PROPDMGEXP, CROPDMG, CROPDMGEXP)
+stormData <- dplyr::select(stormDataRaw, BGN_DATE, EVTYPE, FATALITIES, INJURIES, PROPDMG, PROPDMGEXP, CROPDMG, CROPDMGEXP)
 ```
 
 Convert date
@@ -61,8 +61,11 @@ stormData$beginDate <- as.Date(strptime(stormData$BGN_DATE, format = "%m/%d/%Y %
 Standardize Events
 
 ```{R}
-stormData$eventType <- as.character(stormData$EVTYPE)  
-stormData$eventType[grepl("tornad", stormData$eventType, ignore.case = TRUE)]          <- "TORNADO"  
+#stormData$eventType <- as.character(stormData$EVTYPE)
+
+stormData <- mutate(stormData, eventType = as.character(stormData$EVTYPE))
+
+stormData$eventType[grepl("tornad", stormData$eventType, ignore.case = TRUE)]          <- "TORNADO"
 stormData$eventType[grepl("thun.*orm", stormData$eventType, ignore.case = TRUE)]       <- "THUNDERSTORM"  
 stormData$eventType[grepl("tstm", stormData$eventType, ignore.case = TRUE)]            <- "THUNDERSTORM"  
 stormData$eventType[grepl("snow", stormData$eventType, ignore.case = TRUE)]            <- "SNOW"  
@@ -78,6 +81,38 @@ stormData$eventType[grepl("lightn", stormData$eventType, ignore.case = TRUE)]   
 stormData$eventType[grepl("wind", stormData$eventType, ignore.case = TRUE)]            <- "WIND"  
 stormData$eventType[grepl("cold", stormData$eventType, ignore.case = TRUE)]            <- "COLD"  
 stormData$eventType[grepl("heat", stormData$eventType, ignore.case = TRUE)]            <- "HEAT"  
-stormData$eventType[grepl("storm surge", stormData$eventType, ignore.case = TRUE)]     <- "STORM SURGE"  
+stormData$eventType[grepl("storm surge", stormData$eventType, ignore.case = TRUE)]     <- "STORM SURGE"
+stormData$eventType[grepl("freeze", stormData$eventType, ignore.case = TRUE)]          <- "FREEZE"
+stormData$eventType[grepl("frost", stormData$eventType, ignore.case = TRUE)]          <- "FREEZE"
 stormData$eventType <- as.factor(stormData$eventType)
 ```
+
+Aggregate event damage
+
+```{R}
+# Calculate property damage amounts
+PROPDMGEXP  <- levels(stormData$PROPDMGEXP)
+pMultiplier <- c(1,1,1,1,1,10,100,1000,10000,100000,1000000,10000000,100000000,1000000000,100,100,1000,1000000,1000000)
+propLookup  <- data.frame(cbind(PROPDMGEXP,pMultiplier))
+propLookup$pMultiplier <- as.numeric(as.character(propLookup$pMultiplier))
+stormData <- merge(stormData,propLookup)
+stormData$totalPropDamage <- stormData$PROPDMG*stormData$pMultiplier
+
+topPropdamage <- stormData %>% group_by(eventType) %>% summarise(avgPropDamage=mean(totalPropDamage)) %>% arrange(desc(avgPropDamage))
+
+# Compute crop damage
+CROPDMGEXP <- levels(stormData$CROPDMGEXP)
+cMultiplier <- c(1,1,1,100,1000000000,1000,1000,1000000,1000000)        # crop damage multipliers  
+cropLookup  <- data.frame(cbind(CROPDMGEXP, cMultiplier))                # cropLookup table  
+cropLookup$cMultiplier <- as.numeric(as.character(cropLookup$cMultiplier))
+stormData <- merge(stormData,cropLookup)
+stormData$totalCropDamage <- stormData$CROPDMG*stormData$cMultiplier
+
+topCropdamage <- stormData %>% group_by(eventType) %>% summarise(avgCropDamage=mean(totalCropDamage)) %>% arrange(desc(avgCropDamage))
+
+# Compute human damage
+
+topHumanDamage <- stormData %>% group_by(eventType) %>% summarise(avgHumanDamage=mean(FATALITIES)) %>% arrange(desc(avgHumanDamage))
+
+```
+
