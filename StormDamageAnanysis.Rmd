@@ -97,9 +97,6 @@ propLookup  <- data.frame(cbind(PROPDMGEXP,pMultiplier))
 propLookup$pMultiplier <- as.numeric(as.character(propLookup$pMultiplier))
 stormData <- merge(stormData,propLookup)
 stormData$totalPropDamage <- stormData$PROPDMG*stormData$pMultiplier
-
-topPropdamage <- stormData %>% group_by(eventType) %>% summarise(avgPropDamage=mean(totalPropDamage)) %>% arrange(desc(avgPropDamage))
-
 # Compute crop damage
 CROPDMGEXP <- levels(stormData$CROPDMGEXP)
 cMultiplier <- c(1,1,1,100,1000000000,1000,1000,1000000,1000000)        # crop damage multipliers  
@@ -107,12 +104,64 @@ cropLookup  <- data.frame(cbind(CROPDMGEXP, cMultiplier))                # cropL
 cropLookup$cMultiplier <- as.numeric(as.character(cropLookup$cMultiplier))
 stormData <- merge(stormData,cropLookup)
 stormData$totalCropDamage <- stormData$CROPDMG*stormData$cMultiplier
+stormData$totalDamage <- stormData$totalPropDamage + stormData$totalCropDamage
 
-topCropdamage <- stormData %>% group_by(eventType) %>% summarise(avgCropDamage=mean(totalCropDamage)) %>% arrange(desc(avgCropDamage))
+topEconDamage <- stormData %>% group_by(eventType) %>% summarise(sumTotalDamage=sum(totalDamage)) %>% arrange(desc(sumTotalDamage))
 
 # Compute human damage
+topHumanFatalities <- stormData %>% group_by(eventType) %>% summarise(sumHumanFatalities=sum(FATALITIES)) %>% arrange(desc(sumHumanFatalities))
+topHumanInjuries <- stormData %>% group_by(eventType) %>% summarise(sumHumanInjuries=sum(INJURIES)) %>% arrange(desc(sumHumanInjuries))
 
-topHumanDamage <- stormData %>% group_by(eventType) %>% summarise(avgHumanDamage=mean(FATALITIES)) %>% arrange(desc(avgHumanDamage))
+# Combine all top damage data sets
+allDamage <- merge(topEconDamage, topHumanFatalities)
+allDamage <- merge(allDamage, topHumanInjuries)
+allDamage$sumHumanImpact <- allDamage$sumHumanFatalities + allDamage$sumHumanInjuries
 
+topDamage <- arrange(allDamage,desc(sumTotalDamage))[1:12,]
+topDamage
+
+topHumanDamage <- arrange(allDamage,desc(sumHumanImpact))[1:12,]
+topHumanDamage
 ```
 
+Plotting libraries
+
+```{R results="hide", include=FALSE, cache=FALSE}
+install.packages("ggplot2", repos="http://cran.us.r-project.org")
+library(ggplot2)
+```
+
+Show total damage as 2d scatter plot with total economic damage as x total human impact as y
+
+```{R}
+ggplot(topDamage, aes(x=sumTotalDamage, y=sumHumanImpact, color=eventType)) +  
+    geom_point(aes(size = sumHumanFatalities), alpha=.5) +
+    labs(size="Fatalities") +
+    geom_text(data = topDamage[topDamage$eventType=="TORNADO" ,], 
+              aes(sumTotalDamage,sumHumanImpact, label = eventType), hjust = 1.1, vjust = 1.1) +
+    geom_text(data = topDamage[topDamage$eventType=="FLOOD" ,], 
+              aes(sumTotalDamage,sumHumanImpact, label = eventType), hjust = 1, vjust = -1) +
+    geom_text(data = topDamage[topDamage$eventType=="HAIL" ,], 
+              aes(sumTotalDamage,sumHumanImpact, label = eventType), hjust = -.8, vjust = -.8) +
+    geom_text(data = topDamage[topDamage$eventType=="HEAT" ,], 
+              aes(sumTotalDamage,sumHumanImpact, label = eventType), hjust = 1, vjust = -1) +
+    geom_text(data = topDamage[topDamage$eventType=="HURRICANE" ,], 
+              aes(sumTotalDamage,sumHumanImpact, label = eventType), hjust = -1, vjust = .5) +
+    geom_text(data = topDamage[topDamage$eventType=="LIGHTNING" ,], 
+              aes(sumTotalDamage,sumHumanImpact, label = eventType), vjust = -.3) +
+    geom_text(data = topDamage[topDamage$eventType=="RIP CURRENT" ,], 
+              aes(sumTotalDamage,sumHumanImpact, label = eventType), hjust = .5, vjust = -.3) +
+    geom_text(data = topDamage[topDamage$eventType=="THUNDERSTORM" ,], 
+              aes(sumTotalDamage,sumHumanImpact, label = eventType), hjust = .5, vjust = -1) +
+    geom_text(data = topDamage[topDamage$eventType=="WIND" ,], 
+              aes(sumTotalDamage,sumHumanImpact, label = eventType), hjust = .5, vjust = -1) +
+    geom_text(data = topDamage[topDamage$eventType=="FIRE" ,], 
+              aes(sumTotalDamage,sumHumanImpact, label = eventType), hjust = -.3, vjust = .5) +
+    scale_colour_brewer(palette="Paired")   +
+    scale_size_area(max_size=30) +
+    scale_x_continuous(labels = scales::dollar)  +
+    scale_y_continuous(labels = scales::comma) +
+    xlab("Economic Impact") +
+    ylab("Human Impact") +
+    ggtitle("Most Impactful Human and\nEconomic Damage from Storms")
+```
