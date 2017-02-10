@@ -134,34 +134,75 @@ library(ggplot2)
 Show total damage as 2d scatter plot with total economic damage as x total human impact as y
 
 ```{R}
-ggplot(topDamage, aes(x=sumTotalDamage, y=sumHumanImpact, color=eventType)) +  
-    geom_point(aes(size = sumHumanFatalities), alpha=.5) +
+div = 1000000000
+ggplot(topDamage, aes(x=sumTotalDamage/div, y=sumHumanImpact, color=eventType)) +  
+    geom_point(aes(size = sumHumanFatalities)) +
     labs(size="Fatalities") +
     geom_text(data = topDamage[topDamage$eventType=="TORNADO" ,], 
-              aes(sumTotalDamage,sumHumanImpact, label = eventType), hjust = 1.1, vjust = 1.1) +
-    geom_text(data = topDamage[topDamage$eventType=="FLOOD" ,], 
-              aes(sumTotalDamage,sumHumanImpact, label = eventType), hjust = 1, vjust = -1) +
-    geom_text(data = topDamage[topDamage$eventType=="HAIL" ,], 
-              aes(sumTotalDamage,sumHumanImpact, label = eventType), hjust = -.8, vjust = -.8) +
+              aes(sumTotalDamage/div,sumHumanImpact, label = eventType), hjust = -.8, vjust = 1.1) +
     geom_text(data = topDamage[topDamage$eventType=="HEAT" ,], 
-              aes(sumTotalDamage,sumHumanImpact, label = eventType), hjust = 1, vjust = -1) +
-    geom_text(data = topDamage[topDamage$eventType=="HURRICANE" ,], 
-              aes(sumTotalDamage,sumHumanImpact, label = eventType), hjust = -1, vjust = .5) +
+              aes(sumTotalDamage/div,sumHumanImpact, label = eventType), hjust = 1.5) +
+    geom_text(data = topDamage[topDamage$eventType=="FLOOD" ,], 
+              aes(sumTotalDamage/div,sumHumanImpact, label = eventType), hjust = 1.5) +
     geom_text(data = topDamage[topDamage$eventType=="LIGHTNING" ,], 
-              aes(sumTotalDamage,sumHumanImpact, label = eventType), vjust = -.3) +
-    geom_text(data = topDamage[topDamage$eventType=="RIP CURRENT" ,], 
-              aes(sumTotalDamage,sumHumanImpact, label = eventType), hjust = .5, vjust = -.3) +
+              aes(sumTotalDamage/div,sumHumanImpact, label = eventType), hjust = -.3, vjust = .5) +
     geom_text(data = topDamage[topDamage$eventType=="THUNDERSTORM" ,], 
-              aes(sumTotalDamage,sumHumanImpact, label = eventType), hjust = .5, vjust = -1) +
-    geom_text(data = topDamage[topDamage$eventType=="WIND" ,], 
-              aes(sumTotalDamage,sumHumanImpact, label = eventType), hjust = .5, vjust = -1) +
-    geom_text(data = topDamage[topDamage$eventType=="FIRE" ,], 
-              aes(sumTotalDamage,sumHumanImpact, label = eventType), hjust = -.3, vjust = .5) +
+              aes(sumTotalDamage/div,sumHumanImpact, label = eventType), hjust = -.2, vjust = .5) +
+    geom_text(data = topDamage[topDamage$eventType=="HURRICANE" ,],
+              aes(sumTotalDamage/div,sumHumanImpact, label = eventType), hjust = -.2, vjust = .5) +
+    geom_text(data = topDamage[topDamage$eventType=="WIND" ,],
+              aes(sumTotalDamage/div,sumHumanImpact, label = eventType), hjust = -.5, vjust = -.5) +
+    geom_text(data = topDamage[topDamage$eventType=="RIP CURRENT" ,],
+              aes(sumTotalDamage/div,sumHumanImpact, label = eventType), hjust = 1, vjust = -1) +
+    geom_text(data = topDamage[topDamage$eventType=="AVALANCHE" ,],
+              aes(sumTotalDamage/div,sumHumanImpact, label = eventType), vjust = -.3) +
+    geom_text(data = topDamage[topDamage$eventType=="COLD" ,],
+              aes(sumTotalDamage/div,sumHumanImpact, label = eventType), hjust = .5, vjust = -1) +
+    geom_text(data = topDamage[topDamage$eventType=="WINTER STORM" ,],
+              aes(sumTotalDamage/div,sumHumanImpact, label = eventType), hjust = -.1, vjust = 2) +
     scale_colour_brewer(palette="Paired")   +
     scale_size_area(max_size=30) +
-    scale_x_continuous(labels = scales::dollar)  +
-    scale_y_continuous(labels = scales::comma) +
-    xlab("Economic Impact") +
-    ylab("Human Impact") +
+    scale_x_continuous(labels = scales::dollar, limits = c(min(topDamage$sumTotalDamage)/div,
+                                                         max(topDamage$sumTotalDamage)/div))  +
+    scale_y_continuous(labels = scales::comma, limits = c(min(topDamage$sumHumanImpact),
+                                                          max(topDamage$sumHumanImpact)+5000)) +
+    xlab("Economic Impact (billion)") +
+    ylab("Human Impact (deaths and injuries)") +
+    theme(panel.background = element_rect(fill = "black"))
     ggtitle("Most Impactful Human and\nEconomic Damage from Storms")
+```
+
+Alternative
+
+```{R}
+div = 1000000000
+ggplot(topDamage, aes(x=sumTotalDamage/div, y=sumHumanImpact, color=eventType)) +  
+    geom_point(aes(size = sumHumanFatalities)) +
+    labs(size="Fatalities") +
+    geom_text(data = topDamage[topDamage$eventType=="THUNDERSTORM" ,], 
+              aes(sumTotalDamage/div,sumHumanImpact, label = eventType), hjust = -.2, vjust = .5) +
+    geom_text(data = topDamage[topDamage$eventType=="WIND" ,], 
+              aes(sumTotalDamage/div,sumHumanImpact, label = eventType), hjust = -.5, vjust = .5) +
+    geom_text(data = topDamage[topDamage$eventType=="ICE STORM" ,],
+              aes(sumTotalDamage/div,sumHumanImpact, label = eventType), hjust = -.2, vjust = .5) +
+    geom_text(data = topDamage[topDamage$eventType=="COLD" ,],
+              aes(sumTotalDamage/div,sumHumanImpact, label = eventType), hjust = .5, vjust = -1) +
+    geom_text(data = topDamage[topDamage$eventType=="FIRE" ,],
+              aes(sumTotalDamage/div,sumHumanImpact, label = eventType), hjust = -.4, vjust = .5) +
+    geom_text(data = topDamage[topDamage$eventType=="WINTER STORM" ,],
+              aes(sumTotalDamage/div,sumHumanImpact, label = eventType), hjust = -.1, vjust = 1.1) +
+    geom_text(data = topDamage[topDamage$eventType=="HAIL" ,],
+              aes(sumTotalDamage/div,sumHumanImpact, label = eventType), hjust = .5, vjust = -1) +
+    geom_text(data = topDamage[topDamage$eventType=="TROPICALSTORM" ,],
+              aes(sumTotalDamage/div,sumHumanImpact, label = eventType), hjust = -.2, vjust = .5) +
+    scale_colour_brewer(palette="Paired")   +
+    scale_size_area(max_size=30) +
+    scale_x_continuous(labels = scales::dollar, limits = c(min(topDamage$sumTotalDamage)/div,
+                                                         max(30)))  +
+    scale_y_continuous(labels = scales::comma, limits = c(min(topDamage$sumHumanImpact),
+                                                          max(12000))) +
+    xlab("Economic Impact (billion)") +
+    ylab("Human Impact (deaths and injuries)") +
+    theme(panel.background = element_rect(fill = "black")) +
+    ggtitle("Most Impactful Human and\nEconomic Damage from Storms (detail)")
 ```
