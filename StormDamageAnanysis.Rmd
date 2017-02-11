@@ -1,6 +1,15 @@
-# Storm Damage Analysis X
+# Human and Economic Storm Damage Impact in the United States
 
-## Required Packages
+## Synopsis
+
+This report indentifies the most impactful weather events affecting human populations within the United States in terms of fatalities, injuries and economic losses.  The [Storm Events Database](https://www.ncdc.noaa.gov/stormevents/) complied by the National Oceanic and Atmospheric Administration (NOAA) from 1950 to 2011 will be used to answer the following questions:
+
+* Across the United States, which types of events are most harmful with respect to population health?
+* Across the United States, which types of events have the greatest economic consequences?
+
+## Data Processing
+
+### Required Packages
 
 To download and read the data, we need the following packages:
 
@@ -13,56 +22,66 @@ library(tools)  # md5sum
 library(R.utils)  # bunzip2d
 ```
 
-## Source Data
+### Source Data
 
 ```{R}
 if(!file.exists("data")){dir.create("data")}
 
-fileUrl <- "https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2"
-
 if(!file.exists("data/repdata-data-StormData.csv")) {
+  fileUrl <- "https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2"
   download.file(fileUrl,destfile="./data/repdata-data-StormData.csv.bz2",method="curl")
   bunzip2("data/repdata-data-StormData.csv.bz2")
 }
 stormDataRaw <- read.csv("data/repdata-data-StormData.csv")
 ```
 
-## Data Exploration
+### Dimensions and Structure of the Storm Events Data
 
 ```{R}
 dim(stormDataRaw)
 str(stormDataRaw)
 ```
 
-## Data Cleanse
+### Data Cleaning
 
-We will be using `dplyr` package for data manipulation.
+We will be using `dplyr` package for data clening and manipulation.
 
-```{R results="hide", include=FALSE, cache=FALSE}
+```{R results="hide", cache=FALSE}
 # Use dplyr
 install.packages("dplyr", repos="http://cran.us.r-project.org")
 library(dplyr)
 ```
 
-Mutate data
+### Subset data
 
 ```{R}
 # First take a subset of relevant column variables
 stormData <- dplyr::select(stormDataRaw, BGN_DATE, EVTYPE, FATALITIES, INJURIES, PROPDMG, PROPDMGEXP, CROPDMG, CROPDMGEXP)
 ```
 
-Convert date
+### Date Conversion
+
+Convert the text date to a date type.
 
 ```{R}
 # Convert date
 stormData$beginDate <- as.Date(strptime(stormData$BGN_DATE, format = "%m/%d/%Y %H:%M:%S"))
+
+minDate <- stormData %>% filter(beginDate == min(beginDate))
+maxDate <- stormData %>% filter(beginDate == max(beginDate))
+
+minDate$beginDate[1]
+maxDate$beginDate[1]
 ```
 
-Standardize Events
+### Standardize Events
+
+In many cases, there are multiple event types for the same meteorological event.  For example, there are 88 event types that describe thunderstorms. The following code will consolidate related event types into single event types.
 
 ```{R}
-#stormData$eventType <- as.character(stormData$EVTYPE)
+length(unique(stormData$eventType[grepl("thun.*orm", stormData$eventType, ignore.case = TRUE)]))
 
+# Create another column to consolidate event types
 stormData <- mutate(stormData, eventType = as.character(stormData$EVTYPE))
 
 stormData$eventType[grepl("tornad", stormData$eventType, ignore.case = TRUE)]          <- "TORNADO"
@@ -86,8 +105,19 @@ stormData$eventType[grepl("freeze", stormData$eventType, ignore.case = TRUE)]   
 stormData$eventType[grepl("frost", stormData$eventType, ignore.case = TRUE)]          <- "FREEZE"
 stormData$eventType <- as.factor(stormData$eventType)
 ```
+## Results
 
-Aggregate event damage
+### Load knitr package for table display.
+
+```{R results="hide", cache=FALSE}
+# Use knitr
+install.packages("knitr", repos="http://cran.us.r-project.org")
+library(knitr)
+```
+
+### Aggregate event damage
+
+#### Compute Economic Damage
 
 ```{R}
 # Calculate property damage amounts
@@ -106,8 +136,14 @@ stormData <- merge(stormData,cropLookup)
 stormData$totalCropDamage <- stormData$CROPDMG*stormData$cMultiplier
 stormData$totalDamage <- stormData$totalPropDamage + stormData$totalCropDamage
 
-topEconDamage <- stormData %>% group_by(eventType) %>% summarise(sumTotalDamage=sum(totalDamage)) %>% arrange(desc(sumTotalDamage))
-
+topEconDamage <- stormData %>% group_by(eventType) %>% summarise(sumTotalDamage=sum(totalDamage)) %>% arrange(desc(sumTotalDamage)) %>% select(eventType,sumTotalDamage) %>% top_n(12)
+```
+#### Top Economic Storm Damage
+```{R}
+kable(topEconDamage)
+```
+#### Compute Human Damage
+```{R}
 # Compute human damage
 topHumanFatalities <- stormData %>% group_by(eventType) %>% summarise(sumHumanFatalities=sum(FATALITIES)) %>% arrange(desc(sumHumanFatalities))
 topHumanInjuries <- stormData %>% group_by(eventType) %>% summarise(sumHumanInjuries=sum(INJURIES)) %>% arrange(desc(sumHumanInjuries))
@@ -116,24 +152,28 @@ topHumanInjuries <- stormData %>% group_by(eventType) %>% summarise(sumHumanInju
 allDamage <- merge(topEconDamage, topHumanFatalities)
 allDamage <- merge(allDamage, topHumanInjuries)
 allDamage$sumHumanImpact <- allDamage$sumHumanFatalities + allDamage$sumHumanInjuries
-
-topDamage <- arrange(allDamage,desc(sumTotalDamage))[1:12,]
-topDamage
-
-topHumanDamage <- arrange(allDamage,desc(sumHumanImpact))[1:12,]
-topHumanDamage
+topHumanDamage <- arrange(allDamage,desc(sumHumanImpact))  %>% select(eventType,sumHumanImpact) %>% top_n(12)
+```
+#### Top Human Damage
+```{R}
+kable(topHumanDamage)
 ```
 
-Plotting libraries
+### Data Visualization
 
-```{R results="hide", include=FALSE, cache=FALSE}
+#### Required Packages
+
+```{R results="hide", cache=FALSE}
 install.packages("ggplot2", repos="http://cran.us.r-project.org")
 library(ggplot2)
 ```
 
-Show total damage as 2d scatter plot with total economic damage as x total human impact as y
+Show total damage as 2d scatter plot with total economic damage as x axis, total human impact as y axis and fatalities as point size.
 
-```{R}
+```{R message=FALSE, fig.fullwidth=TRUE, fig.width=8, fig.height=8}
+
+topDamage <- allDamage[1:12,]
+
 div = 1000000000
 ggplot(topDamage, aes(x=sumTotalDamage/div, y=sumHumanImpact, color=eventType)) +  
     geom_point(aes(size = sumHumanFatalities)) +
@@ -168,13 +208,13 @@ ggplot(topDamage, aes(x=sumTotalDamage/div, y=sumHumanImpact, color=eventType)) 
                                                           max(topDamage$sumHumanImpact)+5000)) +
     xlab("Economic Impact (billion)") +
     ylab("Human Impact (deaths and injuries)") +
-    theme(panel.background = element_rect(fill = "black"))
+    theme(panel.background = element_rect(fill = "black")) +
     ggtitle("Most Impactful Human and\nEconomic Damage from Storms")
 ```
 
-Alternative
+Zoom into storm data to focus on economic damage less than $100 billion and 12,500 human lives affected.
 
-```{R}
+```{R message=FALSE, fig.fullwidth=TRUE, fig.width=8, fig.height=8}
 div = 1000000000
 ggplot(topDamage, aes(x=sumTotalDamage/div, y=sumHumanImpact, color=eventType)) +  
     geom_point(aes(size = sumHumanFatalities)) +
