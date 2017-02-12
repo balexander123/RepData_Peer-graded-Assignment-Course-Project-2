@@ -277,5 +277,14 @@ The graph above is a zoomed in view to focus on storm events clustered under 12,
 
 Being able to see this data more clearly after zooming in, an insight that I personally gained from this graph was that indeed, as the Talking Heads sang, ["air can hurt you too"](https://www.google.com/url?sa=t&rct=j&q=&esrc=s&source=web&cd=3&cad=rja&uact=8&ved=0ahUKEwjC5djo4onSAhVkwlQKHVQCBMQQtwIIJzAC&url=https%3A%2F%2Fwww.youtube.com%2Fwatch%3Fv%3DQ9kqoD1t4lw&usg=AFQjCNGjak7SD0Mq4IuLh0sbewFPSLpbow&sig2=u4HZ5NVPVMl-vvKpSBcjUQ).  In this case wind is pretty effective at killing you.
 
-## Referemces
+## References
 
+[coursera: Reproducible Research by John Hopkins University Bloomberg School of Public Health](https://www.coursera.org/learn/reproducible-research) Roger D. Peng, PhD, Associate Professor, Biostatistics, Jeff Leek, PhD, Associate Professor, Biostatistics, and Brian Caffo, PhD, Professor, Biostatistics.
+
+[Storm Events Database](https://www.ncdc.noaa.gov/stormevents/) National Oceanic and Atmospheric Administration.  United States Department of Commerce.
+
+[Read Headed Step Data blog by Keith Helfrich](http://redheadedstepdata.io) Data visualization ideas.
+
+[knitr](https://yihui.name/knitr/) Yihui Xie
+
+[Fear of Music by Talking Heads](https://en.wikipedia.org/wiki/Fear_of_Music) Sire Records 1979
