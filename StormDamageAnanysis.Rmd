@@ -13,12 +13,12 @@ This report indentifies the most impactful weather events affecting human popula
 
 To download and read the data, we need the following packages:
 
-```{R results="hide", include=FALSE, cache=FALSE}
+```{R results='hide', message=FALSE, warning=FALSE}
 install.packages("downloader", repos="http://cran.us.r-project.org")
 install.packages("R.utils", , repos="http://cran.us.r-project.org")
 
-library(downloader)  # download (hopefully platform independent)
-library(tools)  # md5sum
+library(downloader)
+library(tools)    # md5sum
 library(R.utils)  # bunzip2d
 ```
 
@@ -44,9 +44,9 @@ str(stormDataRaw)
 
 ### Data Cleaning
 
-We will be using `dplyr` package for data clening and manipulation.
+We will be using `dplyr` package for data summarystormData$eventType[grepl("thun.*orm", stormData$EVTYPE, ignore.case = TRUE)] and manipulation.
 
-```{R results="hide", cache=FALSE}
+```{R results='hide', message=FALSE, warning=FALSE}
 # Use dplyr
 install.packages("dplyr", repos="http://cran.us.r-project.org")
 library(dplyr)
@@ -54,8 +54,18 @@ library(dplyr)
 
 ### Subset data
 
+First take a subset of relevant column variables:
+
+* BGN_DATE
+* EVTYPE
+* FATALITIES
+* INJURIES
+* PROPDMG
+* PROPDMGEXP
+* CROPDMG
+* CROPDMGEXP
+
 ```{R}
-# First take a subset of relevant column variables
 stormData <- dplyr::select(stormDataRaw, BGN_DATE, EVTYPE, FATALITIES, INJURIES, PROPDMG, PROPDMGEXP, CROPDMG, CROPDMGEXP)
 ```
 
@@ -79,7 +89,7 @@ maxDate$beginDate[1]
 In many cases, there are multiple event types for the same meteorological event.  For example, there are 88 event types that describe thunderstorms. The following code will consolidate related event types into single event types.
 
 ```{R}
-length(unique(stormData$eventType[grepl("thun.*orm", stormData$eventType, ignore.case = TRUE)]))
+length(unique(stormData$EVTYPE[grepl("thun.*orm", stormData$EVTYPE, ignore.case = TRUE)]))
 
 # Create another column to consolidate event types
 stormData <- mutate(stormData, eventType = as.character(stormData$EVTYPE))
@@ -109,15 +119,22 @@ stormData$eventType <- as.factor(stormData$eventType)
 
 ### Load knitr package for table display.
 
-```{R results="hide", cache=FALSE}
-# Use knitr
+```{R results='hide', message=FALSE, warning=FALSE}
 install.packages("knitr", repos="http://cran.us.r-project.org")
 library(knitr)
 ```
 
 ### Aggregate event damage
 
+To compute human and property damage, aggregate the sums of damage from relevant columns.  For instance, total economic damage per event will combine property and crop damage aggregate sums.  Total human damage by event will be combine fatalities and injuries.
+
 #### Compute Economic Damage
+
+Use formattable for current formatting
+```{R results='hide', message=FALSE, warning=FALSE}
+install.packages("formattable", repos="http://cran.us.r-project.org")
+library(formattable)
+```
 
 ```{R}
 # Calculate property damage amounts
@@ -129,19 +146,23 @@ stormData <- merge(stormData,propLookup)
 stormData$totalPropDamage <- stormData$PROPDMG*stormData$pMultiplier
 # Compute crop damage
 CROPDMGEXP <- levels(stormData$CROPDMGEXP)
-cMultiplier <- c(1,1,1,100,1000000000,1000,1000,1000000,1000000)        # crop damage multipliers  
-cropLookup  <- data.frame(cbind(CROPDMGEXP, cMultiplier))                # cropLookup table  
+cMultiplier <- c(1,1,1,100,1000000000,1000,1000,1000000,1000000)  
+cropLookup  <- data.frame(cbind(CROPDMGEXP, cMultiplier))  
 cropLookup$cMultiplier <- as.numeric(as.character(cropLookup$cMultiplier))
 stormData <- merge(stormData,cropLookup)
 stormData$totalCropDamage <- stormData$CROPDMG*stormData$cMultiplier
 stormData$totalDamage <- stormData$totalPropDamage + stormData$totalCropDamage
-
+# generate top economic damage
 topEconDamage <- stormData %>% group_by(eventType) %>% summarise(sumTotalDamage=sum(totalDamage)) %>% arrange(desc(sumTotalDamage)) %>% select(eventType,sumTotalDamage) %>% top_n(12)
+topEconDamage$sumTotalDamage <- currency(topEconDamage$sumTotalDamage, symbol = "$")
 ```
 #### Top Economic Storm Damage
-```{R}
-kable(topEconDamage)
+```{R} 
+kable(topEconDamage, col.names=c("Event","Total Property and Crop Damage"), caption = "Top 12 Economic Impact from Storm Events")
 ```
+
+The table above summaizes the top 12 economic damage caused by storms in the United States.  Across the United States, floods, hurricanes, tornados are the top 3 most harmful with respect to economic consequences
+
 #### Compute Human Damage
 ```{R}
 # Compute human damage
@@ -152,18 +173,22 @@ topHumanInjuries <- stormData %>% group_by(eventType) %>% summarise(sumHumanInju
 allDamage <- merge(topEconDamage, topHumanFatalities)
 allDamage <- merge(allDamage, topHumanInjuries)
 allDamage$sumHumanImpact <- allDamage$sumHumanFatalities + allDamage$sumHumanInjuries
-topHumanDamage <- arrange(allDamage,desc(sumHumanImpact))  %>% select(eventType,sumHumanImpact) %>% top_n(12)
+
+# Generate top human damage
+topHumanDamage <- arrange(allDamage,desc(sumHumanImpact))  %>% select(eventType,sumHumanImpact, sumHumanFatalities, sumHumanInjuries) %>% top_n(12)
 ```
 #### Top Human Damage
 ```{R}
-kable(topHumanDamage)
+kable(topHumanDamage, col.names=c("Event", "Human Impact", "Fatalites", "Injuries"), caption = "Top 12 Human Impact from Storm Events")
 ```
+
+The table above shows the 12 top most impactful storm events on human populations in terms of fatalities and injuries.  Across the United States, tornado, thunderstorm and flood events are most harmful with respect to population health.
 
 ### Data Visualization
 
 #### Required Packages
 
-```{R results="hide", cache=FALSE}
+```{R results='hide', message=FALSE, warning=FALSE}
 install.packages("ggplot2", repos="http://cran.us.r-project.org")
 library(ggplot2)
 ```
@@ -212,7 +237,7 @@ ggplot(topDamage, aes(x=sumTotalDamage/div, y=sumHumanImpact, color=eventType)) 
     ggtitle("Most Impactful Human and\nEconomic Damage from Storms")
 ```
 
-Zoom into storm data to focus on economic damage less than $100 billion and 12,500 human lives affected.
+To better understand economic damage less than $100 billion and 12,500 human lives affected, zoom into storm data to focus on these events.
 
 ```{R message=FALSE, fig.fullwidth=TRUE, fig.width=8, fig.height=8}
 div = 1000000000
@@ -246,3 +271,11 @@ ggplot(topDamage, aes(x=sumTotalDamage/div, y=sumHumanImpact, color=eventType)) 
     theme(panel.background = element_rect(fill = "black")) +
     ggtitle("Most Impactful Human and\nEconomic Damage from Storms (detail)")
 ```
+
+
+The graph above is a zoomed in view to focus on storm events clustered under 12,500 human impact and less than $30 billion dollars.
+
+Being able to see this data more clearly after zooming in, an insight that I personally gained from this graph was that indeed, as the Talking Heads sang, ["air can hurt you too"](https://www.google.com/url?sa=t&rct=j&q=&esrc=s&source=web&cd=3&cad=rja&uact=8&ved=0ahUKEwjC5djo4onSAhVkwlQKHVQCBMQQtwIIJzAC&url=https%3A%2F%2Fwww.youtube.com%2Fwatch%3Fv%3DQ9kqoD1t4lw&usg=AFQjCNGjak7SD0Mq4IuLh0sbewFPSLpbow&sig2=u4HZ5NVPVMl-vvKpSBcjUQ).  In this case wind is pretty effective at killing you.
+
+## Referemces
+
