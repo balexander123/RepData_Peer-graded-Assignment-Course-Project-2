@@ -161,7 +161,7 @@ topEconDamage$sumTotalDamage <- currency(topEconDamage$sumTotalDamage, symbol = 
 kable(topEconDamage, col.names=c("Event","Total Property and Crop Damage"), caption = "Top 12 Economic Impact from Storm Events")
 ```
 
-The table above summaizes the top 12 economic damage caused by storms in the United States.  Across the United States, floods, hurricanes, tornados are the top 3 most harmful with respect to economic consequences
+The table above shows the 12 top most impactful storm events in terms of economic damage.  Across the United States, floods, hurricanes, tornados are the top 3 most harmful with respect to economic consequences.
 
 #### Compute Human Damage
 ```{R}
@@ -193,7 +193,7 @@ install.packages("ggplot2", repos="http://cran.us.r-project.org")
 library(ggplot2)
 ```
 
-Show total damage as 2d scatter plot with total economic damage as x axis, total human impact as y axis and fatalities as point size.
+Show total damage as 2d scatter plot with total economic damage as x-axis, total human impact as y-axis and fatalities as point size.
 
 ```{R message=FALSE, fig.fullwidth=TRUE, fig.width=8, fig.height=8}
 
@@ -236,6 +236,8 @@ ggplot(topDamage, aes(x=sumTotalDamage/div, y=sumHumanImpact, color=eventType)) 
     theme(panel.background = element_rect(fill = "black")) +
     ggtitle("Most Impactful Human and\nEconomic Damage from Storms")
 ```
+The graph above shows the magnitude of harm to human life that comes from tornados with moderate economic damage.  Tornados are far and away the most dangerous for human safety.  Where as floods produce the most economic damage and relatively moderate human impact. Hurricanes produce the second most impactful economic damage and less human harm than thunderstorms and wind.
+
 
 To better understand economic damage less than $100 billion and 12,500 human lives affected, zoom into storm data to focus on these events.
 
