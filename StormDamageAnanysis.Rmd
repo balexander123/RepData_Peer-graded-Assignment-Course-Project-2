@@ -1,3 +1,8 @@
+---
+output:
+  pdf_document: default
+  html_document: default
+---
 # Human and Economic Storm Damage Impact in the United States
 
 ## Synopsis
@@ -130,7 +135,7 @@ To compute human and property damage, aggregate the sums of damage from relevant
 
 #### Compute Economic Damage
 
-Use formattable for current formatting
+Use formattable for currency formatting
 ```{R results='hide', message=FALSE, warning=FALSE}
 install.packages("formattable", repos="http://cran.us.r-project.org")
 library(formattable)
